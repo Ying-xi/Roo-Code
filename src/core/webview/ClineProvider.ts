@@ -798,6 +798,7 @@ export class ClineProvider
 	 * @param newMode The mode to switch to
 	 */
 	public async handleModeSwitch(newMode: Mode) {
+		this.log(`[Debug] handleModeSwitch: Switching to mode '${newMode}'`)
 		const cline = this.getCurrentCline()
 
 		if (cline) {
@@ -819,6 +820,7 @@ export class ClineProvider
 			const profile = listApiConfig.find(({ id }) => id === savedConfigId)
 
 			if (profile?.name) {
+				this.log(`[Debug] handleModeSwitch: Activating profile '${profile.name}' for mode '${newMode}'`)
 				await this.activateProviderProfile({ name: profile.name })
 			}
 		} else {
@@ -834,6 +836,15 @@ export class ClineProvider
 			}
 		}
 
+		const task = this.getCurrentCline()
+		if (task) {
+			const modelInfo = task.api.getModel()
+			this.log(
+				`[Debug] handleModeSwitch: Task API updated. New model: ${modelInfo.id}, Context Window: ${modelInfo.info.contextWindow}`,
+			)
+		}
+
+		this.log(`[Debug] handleModeSwitch: Posting new state to webview for mode '${newMode}'`)
 		await this.postStateToWebview()
 	}
 
@@ -1126,7 +1137,7 @@ export class ClineProvider
 		apiConversationHistory: Anthropic.MessageParam[]
 	}> {
 		const history = this.getGlobalState("taskHistory") ?? []
-		const historyItem = history.find((item) => item.id === id)
+		const historyItem = history.find((item: HistoryItem) => item.id === id)
 
 		if (historyItem) {
 			const { getTaskDirectoryPath } = await import("../../utils/storage")
@@ -1236,7 +1247,7 @@ export class ClineProvider
 
 	async deleteTaskFromState(id: string) {
 		const taskHistory = this.getGlobalState("taskHistory") ?? []
-		const updatedTaskHistory = taskHistory.filter((task) => task.id !== id)
+		const updatedTaskHistory = taskHistory.filter((task: HistoryItem) => task.id !== id)
 		await this.updateGlobalState("taskHistory", updatedTaskHistory)
 		await this.postStateToWebview()
 	}
@@ -1381,6 +1392,7 @@ export class ClineProvider
 			listApiConfigMeta,
 			pinnedApiConfigs,
 			mode,
+			modeApiConfigs,
 			customModePrompts,
 			customSupportPrompts,
 			enhancementApiConfigId,
@@ -1477,6 +1489,7 @@ export class ClineProvider
 			listApiConfigMeta: listApiConfigMeta ?? [],
 			pinnedApiConfigs: pinnedApiConfigs ?? {},
 			mode: mode ?? defaultModeSlug,
+			modeApiConfigs: modeApiConfigs ?? {},
 			customModePrompts: customModePrompts ?? {},
 			customSupportPrompts: customSupportPrompts ?? {},
 			enhancementApiConfigId,
